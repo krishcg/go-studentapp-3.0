@@ -7,22 +7,27 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"time"
 
+	"github.com/golang-jwt/jwt"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/gofrs/uuid"
 )
 
-var client *mongo.Client
-var clientOptions *options.ClientOptions
+var (
+	client        *mongo.Client
+	clientOptions *options.ClientOptions
+	secretkey     string = "secretkeyjwt"
+)
 
 const (
 	mongo_db_string = "mongodb+srv://mongo642:Altrancg123@cluster0.3ptkea0.mongodb.net/test?retryWrites=true&w=majority"
@@ -39,8 +44,84 @@ type Student struct {
 	ImageUrl  string `json:"image_url" bson:"image_url"`
 }
 
+type User struct {
+	gorm.Model
+	Name     string `json:"name"`
+	Email    string `gorm:"unique" json:"email"`
+	Password string `json:"password"`
+	Role     string `json:"role"`
+}
+
+type Authentication struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type Token struct {
+	Role        string `json:"role"`
+	Email       string `json:"email"`
+	TokenString string `json:"token"`
+}
+
+type Error struct {
+	IsError bool   `json:"isError"`
+	Message string `json:"message"`
+}
+
+//--------------HELPER FUNCTIONS---------------------
+//set error message in Error struct
+func SetError(err Error, message string) Error {
+	err.IsError = true
+	err.Message = message
+	return err
+}
+
+//---------------------MIDDLEWARE FUNCTION-----------------------
+//check whether user is authorized or not
+func IsAuthorized(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Header["Token"] == nil {
+			var err Error
+			err = SetError(err, "No Token Found")
+			json.NewEncoder(w).Encode(err)
+			return
+		}
+		var mySigningKey = []byte(secretkey)
+		token, err := jwt.Parse(r.Header["Token"][0], func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("There was an error in parsing token.")
+			}
+			return mySigningKey, nil
+		})
+		if err != nil {
+			var err Error
+			err = SetError(err, "Your Token has been expired.")
+			json.NewEncoder(w).Encode(err)
+			return
+		}
+		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			if claims["role"] == "admin" {
+				r.Header.Set("Role", "admin")
+				handler.ServeHTTP(w, r)
+				return
+			} else if claims["role"] == "user" {
+				r.Header.Set("Role", "user")
+				handler.ServeHTTP(w, r)
+				return
+			}
+		}
+		var reserr Error
+		reserr = SetError(reserr, "Not Authorized.")
+		json.NewEncoder(w).Encode(err)
+	}
+}
+
 // To post the student details
 func CreateStudentEndpoint(response http.ResponseWriter, request *http.Request) {
+	if request.Header.Get("Role") != "admin" {
+		response.Write([]byte("Not Authorized to Perform this operation"))
+		return
+	}
 	log.Println("This is Insert API")
 	response.Header().Set("content-type", "application/json")
 	response.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -75,6 +156,10 @@ func CreateStudentEndpoint(response http.ResponseWriter, request *http.Request) 
 
 // To fetch the student data
 func GetStudentEndpoint(response http.ResponseWriter, request *http.Request) {
+	if request.Header.Get("Role") != "user" && request.Header.Get("Role") != "admin" {
+		response.Write([]byte("Not Authorized to Perform this operation"))
+		return
+	}
 	log.Println("This is Fetch API")
 	fmt.Println("This is Fetch API")
 	client = MongoDBConnection(clientOptions)
@@ -101,6 +186,10 @@ func GetStudentEndpoint(response http.ResponseWriter, request *http.Request) {
 
 // To update the student details
 func UpdateStudentEndpoint(response http.ResponseWriter, request *http.Request) {
+	if request.Header.Get("Role") != "admin" {
+		response.Write([]byte("Not Authorized to Perform this operation"))
+		return
+	}
 	log.Println("This is Update API")
 	response.Header().Set("content-type", "application/json")
 	response.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
@@ -143,6 +232,10 @@ func UpdateStudentEndpoint(response http.ResponseWriter, request *http.Request) 
 }
 
 func DeleteStudentEndpoint(response http.ResponseWriter, request *http.Request) {
+	if request.Header.Get("Role") != "admin" {
+		response.Write([]byte("Not Authorized to Perform this operation"))
+		return
+	}
 	log.Println("This is Delete API")
 	response.Header().Set("content-type", "application/json")
 	response.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -176,6 +269,10 @@ func DeleteStudentEndpoint(response http.ResponseWriter, request *http.Request) 
 
 // To get the list of Students
 func GetStudentsListEndpoint(response http.ResponseWriter, request *http.Request) {
+	if request.Header.Get("Role") != "user" && request.Header.Get("Role") != "admin" {
+		response.Write([]byte("Not Authorized to Perform this operation"))
+		return
+	}
 	log.Println("This is Students list API")
 	response.Header().Set("content-type", "application/json")
 	response.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -210,6 +307,10 @@ func GetStudentsListEndpoint(response http.ResponseWriter, request *http.Request
 
 // To upload the image of student
 func uploadimage(response http.ResponseWriter, request *http.Request) {
+	if request.Header.Get("Role") != "admin" {
+		response.Write([]byte("Not Authorized to Perform this operation"))
+		return
+	}
 	log.Println("Uploading the Student Profile Picture")
 	response.Header().Set("content-type", "application/json")
 	response.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
@@ -273,41 +374,103 @@ func uploadimage(response http.ResponseWriter, request *http.Request) {
 	// fmt.Println("==========================================================")
 }
 
+// To sign up to the application
+func SignUp(w http.ResponseWriter, r *http.Request) {
+	connection := GetDatabase()
+	defer CloseDatabase(connection)
+
+	var user User
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		var err Error
+		err = SetError(err, "Error in reading payload.")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+
+	var dbuser User
+	connection.Where("email = ?", user.Email).First(&dbuser)
+
+	//check email is alredy registered or not
+	if dbuser.Email != "" {
+		var err Error
+		err = SetError(err, "Email already in use")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+
+	user.Password, err = GeneratehashPassword(user.Password)
+	if err != nil {
+		log.Fatalln("Error in password hashing.")
+	}
+
+	//insert user details in database
+	connection.Create(&user)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
+// To sign into the application
+func SignIn(w http.ResponseWriter, r *http.Request) {
+	connection := GetDatabase()
+	defer CloseDatabase(connection)
+
+	var authDetails Authentication
+
+	err := json.NewDecoder(r.Body).Decode(&authDetails)
+	if err != nil {
+		var err Error
+		err = SetError(err, "Error in reading payload.")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+
+	var authUser User
+	connection.Where("email = 	?", authDetails.Email).First(&authUser)
+
+	if authUser.Email == "" {
+		var err Error
+		err = SetError(err, "Username or Password is incorrect")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+
+	check := CheckPasswordHash(authDetails.Password, authUser.Password)
+
+	if !check {
+		var err Error
+		err = SetError(err, "Username or Password is incorrect")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+
+	validToken, err := GenerateJWT(authUser.Email, authUser.Role)
+	if err != nil {
+		var err Error
+		err = SetError(err, "Failed to generate token")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+
+	var token Token
+	token.Email = authUser.Email
+	token.Role = authUser.Role
+	token.TokenString = validToken
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(token)
+}
+
 func GetBlobName() string {
 	t := time.Now()
 	uuid, _ := uuid.NewV4()
 
 	return fmt.Sprintf("%s-%v.jpg", t.Format("20060102"), uuid)
-}
-
-func UploadBytesToBlob(b []byte) (string, error) {
-	azrKey, accountName, endPoint, container := GetAccountInfo()
-	u, _ := url.Parse(fmt.Sprint(endPoint, container, "/", GetBlobName()))
-	credential, errC := azblob.NewSharedKeyCredential(accountName, azrKey)
-	if errC != nil {
-		return "", errC
-	}
-
-	blockBlobUrl := azblob.NewBlockBlobURL(*u, azblob.NewPipeline(credential, azblob.PipelineOptions{}))
-
-	ctx := context.Background()
-	o := azblob.UploadToBlockBlobOptions{
-		BlobHTTPHeaders: azblob.BlobHTTPHeaders{
-			ContentType: "image/jpg",
-		},
-	}
-
-	_, errU := azblob.UploadBufferToBlockBlob(ctx, b, blockBlobUrl, o)
-	return blockBlobUrl.String(), errU
-}
-
-func GetAccountInfo() (string, string, string, string) {
-	azrKey := "bY5wX5qIF3nC3joGnkEi2rX0BGXF9NXKq7IvT9gaM7C40N+eaxF7Kwf/J9u0x4yFiKEM2LiwdzJO+AStQ5eNuQ=="
-	azrBlobAccountName := "studentappstorageaccount"
-	azrPrimaryBlobServiceEndpoint := fmt.Sprintf("https://%s.blob.core.windows.net/", azrBlobAccountName)
-	azrBlobContainer := "students-images"
-
-	return azrKey, azrBlobAccountName, azrPrimaryBlobServiceEndpoint, azrBlobContainer
 }
 
 // Logging
@@ -322,7 +485,7 @@ func openLogFile() *os.File {
 // Main function
 func main() {
 	fmt.Println("Starting the application...")
-
+	InitialMigration()
 	logFile := openLogFile()
 	defer logFile.Close()
 	log.SetOutput(logFile)
@@ -331,17 +494,27 @@ func main() {
 	// fmt.Println("Clinet ", client)
 	router := mux.NewRouter()
 	// To insert the student details
-	router.HandleFunc("/student", CreateStudentEndpoint).Methods("POST", "OPTIONS")
+	router.HandleFunc("/student", IsAuthorized(CreateStudentEndpoint)).Methods("POST", "OPTIONS")
 	// To get the students list
-	router.HandleFunc("/students", GetStudentsListEndpoint).Methods("GET", "OPTIONS")
+	router.HandleFunc("/students", IsAuthorized(GetStudentsListEndpoint)).Methods("GET", "OPTIONS")
 	// To update the students details
-	router.HandleFunc("/student/update", UpdateStudentEndpoint).Methods("PUT", "OPTIONS")
+	router.HandleFunc("/student/update", IsAuthorized(UpdateStudentEndpoint)).Methods("PUT", "OPTIONS")
 	// To fetch the student details
-	router.HandleFunc("/student/{id}", GetStudentEndpoint).Methods("GET", "OPTIONS")
+	router.HandleFunc("/student/{id}", IsAuthorized(GetStudentEndpoint)).Methods("GET", "OPTIONS")
 	// To delete the student record
-	router.HandleFunc("/student/delete/{id}", DeleteStudentEndpoint).Methods("DELETE", "OPTIONS")
+	router.HandleFunc("/student/delete/{id}", IsAuthorized(DeleteStudentEndpoint)).Methods("DELETE", "OPTIONS")
 	// To upload the student image
-	router.HandleFunc("/student/upload/{id}", uploadimage).Methods("POST", "OPTIONS")
+	router.HandleFunc("/student/upload/{id}", IsAuthorized(uploadimage)).Methods("POST", "OPTIONS")
+	router.HandleFunc("/signup", SignUp).Methods("POST")
+	router.HandleFunc("/signin", SignIn).Methods("POST")
+	router.Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, Access-Control-Request-Headers, Access-Control-Request-Method, Connection, Host, Origin, User-Agent, Referer, Cache-Control, X-header")
+	})
 	fmt.Println("Listening for connections at port", webport)
-	http.ListenAndServe(webport, router)
+	err := http.ListenAndServe(webport, handlers.CORS(handlers.AllowedHeaders([]string{"X-Requested-With", "Access-Control-Allow-Origin", "Content-Type", "Authorization"}), handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"}), handlers.AllowedOrigins([]string{"*"}))(router))
+	if err != nil {
+		log.Fatal(err)
+	}
 }

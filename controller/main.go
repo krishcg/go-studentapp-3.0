@@ -118,10 +118,10 @@ func IsAuthorized(handler http.HandlerFunc) http.HandlerFunc {
 
 // To post the student details
 func CreateStudentEndpoint(response http.ResponseWriter, request *http.Request) {
-	if request.Header.Get("Role") != "admin" {
-		response.Write([]byte("Not Authorized to Perform this operation"))
-		return
-	}
+	// if request.Header.Get("Role") != "admin" {
+	// 	response.Write([]byte("Not Authorized to Perform this operation"))
+	// 	return
+	// }
 	log.Println("This is Insert API")
 	response.Header().Set("content-type", "application/json")
 	response.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -156,10 +156,10 @@ func CreateStudentEndpoint(response http.ResponseWriter, request *http.Request) 
 
 // To fetch the student data
 func GetStudentEndpoint(response http.ResponseWriter, request *http.Request) {
-	if request.Header.Get("Role") != "user" && request.Header.Get("Role") != "admin" {
-		response.Write([]byte("Not Authorized to Perform this operation"))
-		return
-	}
+	// if request.Header.Get("Role") != "user" && request.Header.Get("Role") != "admin" {
+	// 	response.Write([]byte("Not Authorized to Perform this operation"))
+	// 	return
+	// }
 	log.Println("This is Fetch API")
 	fmt.Println("This is Fetch API")
 	client = MongoDBConnection(clientOptions)
@@ -186,10 +186,10 @@ func GetStudentEndpoint(response http.ResponseWriter, request *http.Request) {
 
 // To update the student details
 func UpdateStudentEndpoint(response http.ResponseWriter, request *http.Request) {
-	if request.Header.Get("Role") != "admin" {
-		response.Write([]byte("Not Authorized to Perform this operation"))
-		return
-	}
+	// if request.Header.Get("Role") != "admin" {
+	// 	response.Write([]byte("Not Authorized to Perform this operation"))
+	// 	return
+	// }
 	log.Println("This is Update API")
 	response.Header().Set("content-type", "application/json")
 	response.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
@@ -232,10 +232,10 @@ func UpdateStudentEndpoint(response http.ResponseWriter, request *http.Request) 
 }
 
 func DeleteStudentEndpoint(response http.ResponseWriter, request *http.Request) {
-	if request.Header.Get("Role") != "admin" {
-		response.Write([]byte("Not Authorized to Perform this operation"))
-		return
-	}
+	// if request.Header.Get("Role") != "admin" {
+	// 	response.Write([]byte("Not Authorized to Perform this operation"))
+	// 	return
+	// }
 	log.Println("This is Delete API")
 	response.Header().Set("content-type", "application/json")
 	response.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -269,10 +269,10 @@ func DeleteStudentEndpoint(response http.ResponseWriter, request *http.Request) 
 
 // To get the list of Students
 func GetStudentsListEndpoint(response http.ResponseWriter, request *http.Request) {
-	if request.Header.Get("Role") != "user" && request.Header.Get("Role") != "admin" {
-		response.Write([]byte("Not Authorized to Perform this operation"))
-		return
-	}
+	// if request.Header.Get("Role") != "user" && request.Header.Get("Role") != "admin" {
+	// 	response.Write([]byte("Not Authorized to Perform this operation"))
+	// 	return
+	// }
 	log.Println("This is Students list API")
 	response.Header().Set("content-type", "application/json")
 	response.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -307,10 +307,10 @@ func GetStudentsListEndpoint(response http.ResponseWriter, request *http.Request
 
 // To upload the image of student
 func uploadimage(response http.ResponseWriter, request *http.Request) {
-	if request.Header.Get("Role") != "admin" {
-		response.Write([]byte("Not Authorized to Perform this operation"))
-		return
-	}
+	// if request.Header.Get("Role") != "admin" {
+	// 	response.Write([]byte("Not Authorized to Perform this operation"))
+	// 	return
+	// }
 	log.Println("Uploading the Student Profile Picture")
 	response.Header().Set("content-type", "application/json")
 	response.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
@@ -494,17 +494,17 @@ func main() {
 	// fmt.Println("Clinet ", client)
 	router := mux.NewRouter()
 	// To insert the student details
-	router.HandleFunc("/student", IsAuthorized(CreateStudentEndpoint)).Methods("POST", "OPTIONS")
+	router.HandleFunc("/student", CreateStudentEndpoint).Methods("POST", "OPTIONS")
 	// To get the students list
-	router.HandleFunc("/students", IsAuthorized(GetStudentsListEndpoint)).Methods("GET", "OPTIONS")
+	router.HandleFunc("/students", GetStudentsListEndpoint).Methods("GET", "OPTIONS")
 	// To update the students details
-	router.HandleFunc("/student/update", IsAuthorized(UpdateStudentEndpoint)).Methods("PUT", "OPTIONS")
+	router.HandleFunc("/student/update", UpdateStudentEndpoint).Methods("PUT", "OPTIONS")
 	// To fetch the student details
-	router.HandleFunc("/student/{id}", IsAuthorized(GetStudentEndpoint)).Methods("GET", "OPTIONS")
+	router.HandleFunc("/student/{id}", GetStudentEndpoint).Methods("GET", "OPTIONS")
 	// To delete the student record
-	router.HandleFunc("/student/delete/{id}", IsAuthorized(DeleteStudentEndpoint)).Methods("DELETE", "OPTIONS")
+	router.HandleFunc("/student/delete/{id}", DeleteStudentEndpoint).Methods("DELETE", "OPTIONS")
 	// To upload the student image
-	router.HandleFunc("/student/upload/{id}", IsAuthorized(uploadimage)).Methods("POST", "OPTIONS")
+	router.HandleFunc("/student/upload/{id}", uploadimage).Methods("POST", "OPTIONS")
 	router.HandleFunc("/signup", SignUp).Methods("POST")
 	router.HandleFunc("/signin", SignIn).Methods("POST")
 	router.Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

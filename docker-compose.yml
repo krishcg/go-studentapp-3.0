@@ -1,14 +1,14 @@
  version: '3'
 
  services:
-  
+
   studentapp:
     build:
       context: ./
       dockerfile: ./studentapp.dockerfile
     restart: always
-    ports: 
-      - "80:12345"
+    ports:
+      - "80:80"
     deploy:
       mode: replicated
       replicas: 1

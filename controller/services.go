@@ -25,7 +25,7 @@ func GetDatabase() *gorm.DB {
 	// databaseuser := "citus"
 	// databaseurl := "postgres://" + databaseuser + ":" + databasepassword + "@c." + databasename + ".postgres.database.azure.com:5432/" + databaseuser + "?sslmode=require"
 	// databaseurl := "postgres://" + databaseuser + ":" + databasepassword + "@c." + databasename + ".postgres.database.azure.com:5432/" + databaseuser + "?sslmode=require"
-	databaseurl := "postgres://citus:Azureadmin123@c.studentappauthdb.postgres.database.azure.com:5432/citus?sslmode=require"
+	databaseurl := "postgres://citus:Azureadmin123@c.authdb2.postgres.database.azure.com:5432/citus?sslmode=require"
 	connection, err := gorm.Open(database, databaseurl)
 	if err != nil {
 		log.Fatalln("Invalid database url")

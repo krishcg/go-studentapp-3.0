@@ -30,10 +30,10 @@ func UploadBytesToBlob(b []byte) (string, error) {
 }
 
 func GetAccountInfo() (string, string, string, string) {
-	azrKey := "bY5wX5qIF3nC3joGnkEi2rX0BGXF9NXKq7IvT9gaM7C40N+eaxF7Kwf/J9u0x4yFiKEM2LiwdzJO+AStQ5eNuQ=="
-	azrBlobAccountName := "studentappstorageaccount"
+	azrKey := "+UQHwjJltRTx/vqquPKNlYrfO+P3uTY2rJzKKpovdNV6CE57uq5IDQ9E+XEeb0/MMwSv4sdPwTaw+AStWThT8A=="
+	azrBlobAccountName := "studentappstorage"
 	azrPrimaryBlobServiceEndpoint := fmt.Sprintf("https://%s.blob.core.windows.net/", azrBlobAccountName)
-	azrBlobContainer := "students-images"
+	azrBlobContainer := "student-images"
 
 	return azrKey, azrBlobAccountName, azrPrimaryBlobServiceEndpoint, azrBlobContainer
 }

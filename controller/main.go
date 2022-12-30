@@ -32,7 +32,7 @@ var (
 const (
 	mongo_db_string = "mongodb+srv://mongo642:Altrancg123@cluster0.3ptkea0.mongodb.net/test?retryWrites=true&w=majority"
 	//cosmos_db_string = "mongodb://go-cosmos-db:rtebVmg3rVIF7vKsGAWuhSMrI535idmfh0T148oIlNWakgAWpGVnbCyryNVlYy4FprtpbJC2vX1oACDbJe5SDQ==@go-cosmos-db.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@go-cosmos-db@"
-	cosmos_db_string = "mongodb://employeemongo:8aOBlPVzv4YSeZ1xVzlhxAJXXCyfLPb5HpbFw46jIQfuS9jJuF7uTKD61OZLTNrNDiwcvnKeuIMtACDbts5QzA==@employeemongo.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@employeemongo@"
+	cosmos_db_string = "mongodb://studentapp-db:oxbZaMImqDPflKvbI1dX5RI8H0LfMrRbiLudBxMc7sdyHDC0ruKgiiyOzStTnIYsHfOch0e24nqtACDbkogXcw==@studentapp-db.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@studentapp-db@"
 	webport          = ":80"
 )
 
